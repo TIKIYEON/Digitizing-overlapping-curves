@@ -121,7 +121,7 @@ def findSinks(profile, min_width=3, min_depth=50, smoothing=10,
 def extractCurve(src_image, xmin, xmax):#profile_interval=5):
     #Read the image
     
-    profile_interval = 5
+    profile_interval = 1
     h,w,c = src_image.shape
     #profile_interval = int(w/(4*(xmax - xmin)))
     gray = cv2.cvtColor(src_image,cv2.COLOR_BGR2GRAY)
@@ -171,7 +171,7 @@ def extractCurve(src_image, xmin, xmax):#profile_interval=5):
         cv2.waitKey(1)
         # pyplot.plot(profile,'o-')
         # pyplot.show()
-
+    
     return curve_points
 
 def rotate_image(image, angle):
@@ -184,25 +184,17 @@ def rotate_image(image, angle):
 xtemp = 0
 ytemp = 12000
 wtemp = 1250
-#imgFile = "T14502Las/T14502_02-Feb-07_JewelryLog-Kopi.tiff"
-testFile = "../Profilelinetes/overlaytest1.tif"
-#testFile = "../testfolder/v2checktest2.tif"
-#testFile = "../testresults/redscan.png"
-#img = cv2.imread(imgFile)
-""" img = cv2.imread(imgFile)[ytemp:ytemp+750, xtemp:xtemp+850,:]
+testFile = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/Profilelinetes/Simcurve8.tif"
 
-image = rotate_image(img, 90) """
 image = cv2.imread(testFile)
-""" cv2.imwrite("testfolder/scantest.png", img) """
-""" image = imag[xtemp:xtemp+wtemp-400, ytemp:ytemp+wtemp+400,:]
- """
+
 
 h,w,c = image.shape
 #Choose the region of interest including excat boundries the graph
-#, ry, rw, rh = 0,0, w, h
-rx,ry,rw,rh = cv2.selectROI('Select The Complete and Exact Boundaries of Graph',image)
+rx, ry, rw, rh = 0,0, w, h
+#rx,ry,rw,rh = cv2.selectROI('Select The Complete and Exact Boundaries of Graph',image)
 graph = image[ry:ry+rh,rx:rx+rw]
-cv2.destroyWindow('Select The Complete and Exact Boundaries of Graph')
+#cv2.destroyWindow('Select The Complete and Exact Boundaries of Graph')
 
 #Enter the min and max values from the source graph here
 y_min,y_max = 0, 200
@@ -211,16 +203,16 @@ x_min,x_max = 10604.7500, 10667.0
 #Extract the curve points on the image
 curve = extractCurve(graph, x_min, x_max)
 
+pyplot.figure(figsize=(10,6))
+pyplot.imshow(curve, cmap='gray')
+pyplot.show()
+
 #iio.imwrite("Testresults/plot.tif",curvenum)
 #Map curve (x,y) pixel points to actual data points from graph
-curve_normalized = [[int((cx/rw)*(x_max-x_min)+x_min),int((1-cy/rh)*(y_max-y_min)+y_min)] for cx,cy in curve]
-curve_normalized = numpy.array(curve_normalized)
-print(curve_normalized)
+""" curve_normalized = [[float((cx/rw)*(x_max-x_min)+x_min),float((1-cy/rh)*(y_max-y_min)+y_min)] for cx,cy in curve]
+curve_normalized = numpy.array(curve_normalized) """
 
-#Plot the newly constructed curve
-pyplot.figure(figsize=(15,7))
-pyplot.plot(curve_normalized[:,0],curve_normalized[:,1],'o-',linewidth=3)
-#pyplot.savefig('../testfolder/plot.tif', format='tiff', dpi=300)
-pyplot.title('Curve Re-Constructed')
-pyplot.grid(True)
-pyplot.show()
+#Lasiotester
+lasfn = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/T14502Las/T14502_02-Feb-07_JewelryLog.las"
+#lasfn = "../T14502Las/T14502_02-Feb-07_JewelryLog.las"
+#lasfn = "T14502Las/T14502_02-Feb-07_JewelryLog.las"

@@ -6,6 +6,7 @@ import cv2
 import numpy
 import skimage
 import matplotlib.pyplot as pyplot
+from scipy import ndimage
 
 ## Read and display the image
 #Function to take difference between two consecutive points
@@ -125,7 +126,7 @@ def extractCurve(src_image, xmin, xmax):#profile_interval=5):
     h,w,c = src_image.shape
     #profile_interval = int(w/(4*(xmax - xmin)))
     gray = cv2.cvtColor(src_image,cv2.COLOR_BGR2GRAY)
-
+    #gray = ndimage.gaussian_filter(gra, sigma=1.0)
     #Scan the image through it's width(x-axis) get profile line extract curve's points
     last_y_level = 0 #this will always contain the latest curve point
     curve_points = []
@@ -171,7 +172,9 @@ def extractCurve(src_image, xmin, xmax):#profile_interval=5):
         cv2.waitKey(1)
         # pyplot.plot(profile,'o-')
         # pyplot.show()
-
+    pyplot.figure(figsize=(10,6))
+    pyplot.imshow(graph)
+    pyplot.show()
     return curve_points
 
 def rotate_image(image, angle):
@@ -185,7 +188,8 @@ xtemp = 0
 ytemp = 12000
 wtemp = 1250
 #imgFile = "T14502Las/T14502_02-Feb-07_JewelryLog-Kopi.tiff"
-testFile = "../Profilelinetes/overlaytest1.tif"
+#testFile = "../Profilelinetes/overlaytest1.tif"
+testFile = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/Profilelinetest/Mixedattempts/overlaytest2.tif"
 #testFile = "../testfolder/v2checktest2.tif"
 #testFile = "../testresults/redscan.png"
 #img = cv2.imread(imgFile)
@@ -199,10 +203,10 @@ image = cv2.imread(testFile)
 
 h,w,c = image.shape
 #Choose the region of interest including excat boundries the graph
-#, ry, rw, rh = 0,0, w, h
-rx,ry,rw,rh = cv2.selectROI('Select The Complete and Exact Boundaries of Graph',image)
+rx, ry, rw, rh = 0,0, w, h
+#rx,ry,rw,rh = cv2.selectROI('Select The Complete and Exact Boundaries of Graph',image)
 graph = image[ry:ry+rh,rx:rx+rw]
-cv2.destroyWindow('Select The Complete and Exact Boundaries of Graph')
+#cv2.destroyWindow('Select The Complete and Exact Boundaries of Graph')
 
 #Enter the min and max values from the source graph here
 y_min,y_max = 0, 200
@@ -211,9 +215,17 @@ x_min,x_max = 10604.7500, 10667.0
 #Extract the curve points on the image
 curve = extractCurve(graph, x_min, x_max)
 
+""" mask = graph[~curve1] > 20
+
+masked = graph.copy()
+masked[~mask] = [0] """
+pyplot.figure(figsize=(10,6))
+pyplot.imshow(curve, cmap='gray')
+pyplot.show()
+
 #iio.imwrite("Testresults/plot.tif",curvenum)
 #Map curve (x,y) pixel points to actual data points from graph
-curve_normalized = [[int((cx/rw)*(x_max-x_min)+x_min),int((1-cy/rh)*(y_max-y_min)+y_min)] for cx,cy in curve]
+curve_normalized = [[float((cx/rw)*(x_max-x_min)+x_min),float((1-cy/rh)*(y_max-y_min)+y_min)] for cx,cy in curve]
 curve_normalized = numpy.array(curve_normalized)
 print(curve_normalized)
 
@@ -224,3 +236,76 @@ pyplot.plot(curve_normalized[:,0],curve_normalized[:,1],'o-',linewidth=3)
 pyplot.title('Curve Re-Constructed')
 pyplot.grid(True)
 pyplot.show()
+
+#Lasiotester
+lasfn = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/T14502Las/T14502_02-Feb-07_JewelryLog.las"
+#lasfn = "../T14502Las/T14502_02-Feb-07_JewelryLog.las"
+#lasfn = "T14502Las/T14502_02-Feb-07_JewelryLog.las"
+import lasio
+las = lasio.read(str(lasfn),ignore_header_errors=True)
+#las = lasio.read(str(lasfn),encoding="cp866")
+#las = lasio.read(str(lasfn),encoding="windows-1251")
+
+headers=las.keys()
+units = {}
+for j in range(0, len(headers)):
+     uval = las.curves[j].unit
+     units[headers[j]] = uval
+
+dataarr = las.data
+metaheaders=las.well.keys()
+metadata=[]
+metadata.append({})
+metadata.append({})
+metadata.append({})
+
+for j in range(0, len(metaheaders)):
+     uval = las.well[j].unit
+     metadata[0][metaheaders[j]] = uval
+
+     tval = las.well[j].value
+     metadata[1][metaheaders[j]] = str(tval)
+
+     dval = las.well[j].descr
+     metadata[2][metaheaders[j]] = str(dval)
+
+print(units)
+depth = las['DEPT']
+tempGAMM = las['GAMM']
+
+# Generate sample data with 2700 points
+x = numpy.array(depth[:250])
+
+y = numpy.array(tempGAMM[:250])
+xreverse = x
+yreverse = numpy.flip(y,0)
+
+temparray = numpy.zeros((len(xreverse),2))
+for i in range(len(xreverse)):
+    temparray[i] = (xreverse[i], yreverse[i])
+
+
+testdata = numpy.array(temparray)
+print(testdata)
+
+
+from scipy.interpolate import interp1d
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+
+#Filter for NAN
+testfiltered = testdata[~numpy.isnan(testdata).any(axis=1)]
+# Extract x and y from test and real
+x_sim, y_sim = curve_normalized[:, 0], curve_normalized[:, 1]
+x_real, y_real = testfiltered[:, 0], testfiltered[:, 1]
+
+# Interpolate real values
+interpolator = interp1d(x_real, y_real, kind='linear', fill_value="extrapolate")
+#Interpolate sim
+y_real_interp = interpolator(x_sim)
+
+#Mean Square and mean absolute
+mse = mean_squared_error(y_sim, y_real_interp)
+mae = mean_absolute_error(y_sim, y_real_interp)
+
+print(mse)
+print(mae)
