@@ -1,4 +1,6 @@
 numpy
+pandas
+lasio
 scipy
 scikit-image
 matplotlib

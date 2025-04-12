@@ -8,7 +8,7 @@ from skimage.morphology import disk, extrema
 from skimage.segmentation import watershed, mark_boundaries
 from skimage.color import label2rgb
 
-folderpathhisto = "../T12073/1930430DualPropResistivityGammaRayLogScanKopi.tif"
+folderpathhisto = "T12073/1930430DualPropResistivityGammaRayLogScan.tif"
 
 #temp = iio.plugins(folderpathhisto)
 x = 0
@@ -45,8 +45,14 @@ ax.imshow(image3)
 print("plot 1:")
 plt.show()
 
+<<<<<<< ours
 #iio.imwrite("../testfolder/stampremoved2.tif", image3)
 
+||||||| ancestor
+
+=======
+iio.imwrite("testfolder/removedstamp.tiff", image3)
+>>>>>>> theirs
 
 
 """ red_channel2 = red_channel.copy()
