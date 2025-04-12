@@ -118,9 +118,12 @@ def findSinks(profile, min_width=3, min_depth=50, smoothing=10,
     return sinks
 
 #Function to find the curve from the image 
-def extractCurve(src_image, profile_interval=5):
+def extractCurve(src_image, xmin, xmax):#profile_interval=5):
     #Read the image
+    
+    profile_interval = 5
     h,w,c = src_image.shape
+    #profile_interval = int(w/(4*(xmax - xmin)))
     gray = cv2.cvtColor(src_image,cv2.COLOR_BGR2GRAY)
 
     #Scan the image through it's width(x-axis) get profile line extract curve's points
@@ -181,9 +184,9 @@ def rotate_image(image, angle):
 xtemp = 0
 ytemp = 12000
 wtemp = 1250
-imgFile = "../T14502Las/T14502_02-Feb-07_JewelryLog-Kopi.tiff"
-#testFile = "testoutput.png"
-testFile = "../testfolder/checktest.tif"
+#imgFile = "T14502Las/T14502_02-Feb-07_JewelryLog-Kopi.tiff"
+testFile = "../Profilelinetes/overlaytest1.tif"
+#testFile = "../testfolder/v2checktest2.tif"
 #testFile = "../testresults/redscan.png"
 #img = cv2.imread(imgFile)
 """ img = cv2.imread(imgFile)[ytemp:ytemp+750, xtemp:xtemp+850,:]
@@ -194,24 +197,25 @@ image = cv2.imread(testFile)
 """ image = imag[xtemp:xtemp+wtemp-400, ytemp:ytemp+wtemp+400,:]
  """
 
-
+h,w,c = image.shape
 #Choose the region of interest including excat boundries the graph
-#rx, ry, rw, rh = 0,0, 750, 7870
+#, ry, rw, rh = 0,0, w, h
 rx,ry,rw,rh = cv2.selectROI('Select The Complete and Exact Boundaries of Graph',image)
 graph = image[ry:ry+rh,rx:rx+rw]
 cv2.destroyWindow('Select The Complete and Exact Boundaries of Graph')
 
 #Enter the min and max values from the source graph here
-y_min,y_max = 0, 100
-x_min,x_max = 10605.7500, 11111.2500    
+y_min,y_max = 0, 200
+x_min,x_max = 10604.7500, 10667.0   
 
 #Extract the curve points on the image
-curve = extractCurve(graph)
+curve = extractCurve(graph, x_min, x_max)
 
 #iio.imwrite("Testresults/plot.tif",curvenum)
 #Map curve (x,y) pixel points to actual data points from graph
 curve_normalized = [[int((cx/rw)*(x_max-x_min)+x_min),int((1-cy/rh)*(y_max-y_min)+y_min)] for cx,cy in curve]
 curve_normalized = numpy.array(curve_normalized)
+print(curve_normalized)
 
 #Plot the newly constructed curve
 pyplot.figure(figsize=(15,7))

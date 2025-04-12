@@ -15,7 +15,7 @@ x = 0
 y = 2500
 w = 1250
 
-image = iio.imread(uri=folderpathhisto)[y:y+w, x:x+w-200,:]
+image = iio.imread(uri=folderpathhisto)#[y:y+w, x:x+w-200,:]
 fig, ax = plt.subplots()
 ax.imshow(image)
 print("plot 1:")
@@ -45,6 +45,7 @@ ax.imshow(image3)
 print("plot 1:")
 plt.show()
 
+#iio.imwrite("../testfolder/stampremoved2.tif", image3)
 
 
 
