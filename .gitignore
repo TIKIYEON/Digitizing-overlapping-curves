@@ -8,6 +8,9 @@
 /dataSources/
 /dataSources.local.xml
 
+las-files/
+tif-files/
+
 *.tif
 *.tiff
 |||||||
