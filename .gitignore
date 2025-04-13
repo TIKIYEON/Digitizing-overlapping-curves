@@ -1,3 +1,4 @@
+<<<<<<< ours
 # Default ignored files
 /shelf/
 /workspace.xml
@@ -7,5 +8,13 @@
 /dataSources/
 /dataSources.local.xml
 
+las-files/
+tif-files/
+
 *.tif
 *.tiff
+|||||||
+=======
+las-files/
+tif-files/
+>>>>>>> theirs
