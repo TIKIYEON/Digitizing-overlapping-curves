@@ -10,6 +10,7 @@
 
 las-files/
 tif-files/
+las-graph-maker/assets
 
 *.tif
 *.tiff
