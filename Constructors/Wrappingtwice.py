@@ -81,10 +81,52 @@ yarray2 = np.linspace(y2start, y2end, 25)
 y2 = np.append(yarray2, y2)
 x2 = np.append(xarray2, x2)
 
+
 y3 = y[113:120]
-y4 = y[121:]
 x3 = x[113:120]
+x23start = x2[-1]
+x23end = x3[0]
+y23start = y2[-1]
+y23end = 0.0
+
+xarray23 = np.linspace(x23start,x23end, 25)
+yarray23 = np.linspace(y23start, y23end, 25)
+y2 = np.append(y2, yarray23)
+x2 = np.append(x2, xarray23)
+
+x32start = x2[-1]
+x32end = x3[0]
+y32start = 100.0
+y32end = y3[0]
+xarray32 = np.linspace(x32start, x32end, 25)
+yarray32 = np.linspace(y32start, y32end, 25)
+
+y3 = np.append(yarray32, y3)
+x3 = np.append(xarray32, x3)
+
+y4 = y[121:]
 x4 = x[121:]
+x34start = x3[-1]
+x34end = x4[0]
+y34start = y3[-1]
+y34end = 100.0
+
+xarray34 = np.linspace(x34start,x34end, 25)
+yarray34 = np.linspace(y34start, y34end, 25)
+y3 = np.append(y3, yarray34)
+x3 = np.append(x3, xarray34)
+
+x43start = x3[-1]
+x43end = x4[0]
+y43start = 0.0
+y43end = y4[0]
+xarray43 = np.linspace(x43start, x43end, 25)
+yarray43 = np.linspace(y43start, y43end, 25)
+
+y4 = np.append(yarray43, y4)
+x4 = np.append(xarray43, x4)
+y22emd = 100.0
+
 xreverse = x
 yreverse = np.flip(y,0)
 threshold = 100
@@ -95,10 +137,12 @@ print(xreverse[0])
 print(xreverse[:-1])
 fig, ax = plt.subplots(figsize=(5,3))
 #ax.plot(xreverse, yreverse, color='red', linewidth=1)
-ax.set_xlim(10629.75, 10657.5)
+ax.set_xlim(10629.75, x4[-1])
 ax.set_ylim(0, 100)
 ax.plot(x1,y1,color='blue', linewidth=1)
 ax.plot(x2,y2,color='blue', linewidth=1)
+#ax.plot(x3,y3,color='blue', linewidth=1)
+#ax.plot(x4,y4,color='blue', linewidth=1)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 ax.spines['left'].set_visible(False)
@@ -109,8 +153,8 @@ ax.grid(True)
 #ax.legend(['Curve reversed', 'Curve normal'])
 
 # Display the plot
-plt.savefig('wrapping/onewrap.tif', dpi=200, format='tiff', bbox_inches='tight', pad_inches=0)
-
+#plt.savefig('wrapping/twowrap.tif', dpi=200, format='tiff', bbox_inches='tight', pad_inches=0)
+print(x4[-1])
 # Create the subplot
 
 
