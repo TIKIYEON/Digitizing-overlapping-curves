@@ -1,6 +1,7 @@
 #Lasiotester
 import matplotlib.pyplot as plt
 import numpy as np
+
 #lasfn = "../T14502Las/T14502_02-Feb-07_JewelryLog.las"
 lasfn = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/T14502Las/T14502_02-Feb-07_JewelryLog.las"
 import lasio
@@ -21,6 +22,7 @@ metadata.append({})
 metadata.append({})
 metadata.append({})
 
+
 for j in range(0, len(metaheaders)):
      uval = las.well[j].unit
      metadata[0][metaheaders[j]] = uval
@@ -31,13 +33,27 @@ for j in range(0, len(metaheaders)):
      dval = las.well[j].descr
      metadata[2][metaheaders[j]] = str(dval)
 
+print(metadata)
 print(units)
 depth = las['DEPT']
+#y = np.flip(depth,0)
 tempGAMM = las['GAMM']
+x = 0
+""" for i, k in enumerate(units):
+     print(i,k)
+     tempdic = las[k]
+     x = np.array(tempdic)
+     fig, ax = plt.subplots(figsize=(10,20))
+     ax.plot(x, depth, color='red', linewidth=1)
+     ax.invert_yaxis
+     plt.show() """
 
-# Generate sample data with 2700 points
-x = np.array(depth[:250])
-y = np.array(tempGAMM[:250]) # Example data (noisy sine wave)
+
+
+x = np.array(depth[:125])
+y = np.array(tempGAMM[:125]) 
+x2 = np.array (depth[135:])
+y2 = np.array(tempGAMM[135:])
 
 xreverse = x
 yreverse = np.flip(y,0)
@@ -48,25 +64,35 @@ threshold = 100
 print(xreverse[0])
 print(xreverse[:-1])
 fig, ax = plt.subplots(figsize=(20,10))
-ax.plot(xreverse, yreverse, color='red', linewidth=1)
-ax.plot(x,y,color='red', linewidth=1)
+#ax.plot(xreverse, yreverse, color='red', linewidth=1)
+ax.set_xlim(10604.75, 10666.75)
+ax.set_ylim(0, 200)
+ax.plot(x,y,color='blue', linewidth=1)
+ax.plot(x2,y2,color='blue', linewidth=1)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+ax.spines['left'].set_visible(False)
+ax.spines['bottom'].set_visible(False)
+
+ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+ax.grid(True)
+#ax.legend(['Curve reversed', 'Curve normal'])
+
+# Display the plot
+plt.savefig('Unconnectedcurve/test2.tif', dpi=200, format='tiff', bbox_inches='tight', pad_inches=0)
 
 # Create the subplot
 
 
 # Set axis limits
-ax.set_xlim(10604.75, 10666.75)
-ax.set_ylim(0, 200)
+
 
 # Add labels, title, and grid
-ax.set_xlabel('X-axis')
+""" ax.set_xlabel('X-axis')
 ax.set_ylabel('Y-axis')
-ax.set_title('Large Curve')
-ax.grid(True, linestyle='--', alpha=0.6)
-ax.legend(['Curve reversed', 'Curve normal'])
+ax.set_title('Large Curve') """
 
-# Display the plot
-#ax.savefig('../testfolder/testplot.tif', format='tif', dpi=300)
+#iio.imwrite(ax)
 plt.show()
 # Define the threshold for y-values
 #threshold = -26.0

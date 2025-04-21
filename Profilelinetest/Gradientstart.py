@@ -31,7 +31,7 @@ def extractCurves(ima):
     # Step 3: Skeletonize the binary image
     dilated = cv2.dilate(binary, kernel=np.ones((3,3), np.uint8), iterations=1)
     #skeleton = morphology.skeletonize(dilated // 255, method= 'lee')  # Normalize binary to 0 and 1
-    skeleton = morphology.skeletonize(dilated)
+    skeleton = morphology.thin(dilated)
     skeleton = (skeleton * 255).astype("uint8")  # Convert back to 8-bit for OpenCV
 
     #skeleton = ndimage.gaussian_filter(skeleto, sigma=1.0)
@@ -207,11 +207,9 @@ def extractCurves(ima):
 
     curves = []
 
-    
     for x, y in startpoints: #+ intersection_points:
         curve = trace_curve_with_gradients(skeleton, x, y, intersectstart, intersectend)
         curves.append(curve)
-
 
     # Plot curve helper function
     def plot_curve(curve, title):
@@ -238,7 +236,8 @@ wtemp = 1250
 
 #testFile = "Profilelinetes/overlaytest0.tif"
 testFile = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/Profilelinetest/Simcurve8.tif"
-#testFile = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/Profilelinetest/Simcurve8.tif"
+#testFile = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/Profilelinetest/muVNT2.tif"
+#testFile = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/testfolder/fulltext.tif"
 #image = cv2.imread(testFile)
 #image = cv2.imread(testFile, cv2.IMREAD_GRAYSCALE)
 """ cv2.imwrite("testfolder/scantest.png", img) """

@@ -23,7 +23,7 @@ from skimage.transform import probabilistic_hough_line
 import cv2
 
 folderpathhisto = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/ProcessRootpainter/firstrootpainter.tif"
-
+folderpathhisto2 = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/ProcessRootpainter/blueextracted.tif"
 #temp = iio.plugins(folderpathhisto)
 x = 0
 y = 2500
@@ -51,6 +51,7 @@ fig, ax = plt.subplots()
 ax.imshow(image2)
 print("plot 1:")
 plt.show()
+#iio.imwrite("ProcessRootpainter/blueextracted.tif", image2)
 
 image3 = image.copy()
 image3[combined_mask] = [0,0,0,255]
@@ -59,12 +60,40 @@ ax.imshow(image3)
 print("plot 1:")
 plt.show()
 
-I_grayg = skimage.color.rgb2gray(image2[...,3])
+I_grayg = cv2.imread(folderpathhisto2, cv2.IMREAD_GRAYSCALE)
+#I_grayg = skimage.color.rgb2gray(folderpathhisto2)
 plt.figure(figsize=(10,6))
 plt.imshow(I_grayg, cmap='gray')
 plt.show()
-#iio.imwrite("../testfolder/stampremoved2.tif", image3)
+image = ndimage.gaussian_filter(I_grayg, sigma=1.0)
+_, binary = cv2.threshold(image, 180, 255, cv2.THRESH_BINARY_INV)
+""" th3 = cv2.adaptiveThreshold(I_grayg,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
+            cv2.THRESH_BINARY,11,5) """
+plt.figure(figsize=(10,6))
+plt.imshow(binary, cmap='gray')
+plt.show()
+""" dilated = cv2.dilate(th3, kernel=np.ones((3,3), np.uint8), iterations=1)
+plt.figure(figsize=(10,6))
+plt.imshow(dilated, cmap='gray')
+plt.show() """
+#skeleton = morphology.skeletonize(dilated // 255, method= 'lee')  # Normalize binary to 0 and 1
+skeleton = morphology.skeletonize(binary)
+skeleton = (skeleton * 255).astype("uint8")  # Convert back to 8-bit for OpenCV
 
+#skeleton = ndimage.gaussian_filter(skeleto, sigma=1.0)
+plt.figure(figsize=(10,6))
+plt.imshow(skeleton, cmap='gray')
+plt.show()
+
+""" image = ndimage.gaussian_filter(I_grayg, sigma=1)
+plt.figure(figsize=(10,6))
+plt.imshow(image, cmap='gray')
+plt.show()
+#Threshold the image
+_, binary = cv2.threshold(image, 127, 255, cv2.THRESH_BINARY_INV)  # Make curves white
+plt.figure(figsize=(10,6))
+plt.imshow(binary, cmap='gray')
+plt.show() """
 
 
 """ red_channel2 = red_channel.copy()
