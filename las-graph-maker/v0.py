@@ -74,7 +74,7 @@ def plot_las_data(df, file):
     #plt.xlim(-400, 600)
     plt.yticks(depth_ticks)
     # plt.legend()
-    plt.savefig(f"{file_path}-1.jpg", bbox_inches='tight', dpi=200)
+    plt.savefig(f"{file_path}-1.tif", bbox_inches='tight', dpi=200)
     plt.close()
     #plt.show()
 
@@ -87,7 +87,7 @@ def plot_odd_curves(lst, df, file):
             plt.plot(df[column], depth, label=column, color='black')
     plt.gca().invert_yaxis()
     # plt.legend()
-    plt.savefig(f"{file_path}-2.jpg", bbox_inches='tight', dpi=200)
+    plt.savefig(f"{file_path}-2.tif", bbox_inches='tight', dpi=200)
     plt.close()
     #plt.show()
 
