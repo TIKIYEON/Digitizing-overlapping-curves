@@ -7,4 +7,5 @@ matplotlib
 opencv-python
 imageio
 imagecodecs
-imageio[pyav]
+imageio
+seaborn
