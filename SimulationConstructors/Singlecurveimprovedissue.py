@@ -24,7 +24,7 @@ def extractCurves(ima):
     plt.show()
     image = ndimage.gaussian_filter(ima, sigma=1)
     #Threshold the image
-    _, binary = cv2.threshold(image, 127, 255, cv2.THRESH_BINARY_INV)  # Make curves white
+    _, binary = cv2.threshold(image, 60, 255, cv2.THRESH_BINARY)  # Make curves white
     plt.figure(figsize=(10,6))
     plt.imshow(binary, cmap='gray')
     plt.show()
@@ -145,11 +145,11 @@ def extractCurves(ima):
                         
             
             if not neighbors:
-                if len(endpoints) == 1 or len(endpoints) == 0:
-                    endpoints.pop()
-                    break
+                """ if len(endpoints) == 1 or len(endpoints) == 0:
+                    endpoints.pop() """
+                break
                 
-                tempsave = 0
+                """ tempsave = 0
                 temppoint = (current_x, current_y)
                 for i in range(len(endpoints)):
                     if temppoint == endpoints[i]:
@@ -181,7 +181,7 @@ def extractCurves(ima):
                         if (nx, ny) != (current_x, current_y) and skeleton[ny, nx] == 255 and (nx, ny) not in visited:
                             neighbors.append((nx, ny))
                 if len(neighbors) == 0:
-                    break
+                    break """
                 """     endpoints.pop(point)
                 else:
                     print("error, exit")
@@ -209,7 +209,7 @@ def extractCurves(ima):
             
             current_x, current_y = neighbors[0]  
 
-            if (current_x,current_y) in intersection_start:
+            """ if (current_x,current_y) in intersection_start:
                 visited.add((current_x, current_y))
                 curve.append((current_x, current_y))
                 bestslope = 999999.9
@@ -245,9 +245,9 @@ def extractCurves(ima):
                 current_y = endpoint[1]  
                 visited.add((current_x, current_y))
                 curve.append((current_x, current_y))
-            else:
-                visited.add((current_x, current_y))
-                curve.append((current_x, current_y))
+            else: """
+            visited.add((current_x, current_y))
+            curve.append((current_x, current_y))
 
         return curve
 
@@ -280,15 +280,13 @@ xtemp = 0
 ytemp = 12000
 wtemp = 1250
 
-#testFile = "Profilelinetes/overlaytest0.tif"
-#testFile = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/Profilelinetest/Simcurve8.tif"
-#testFile = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/Profilelinetest/muVNT2.tif"
-#testFile = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/testfolder/fulltext.tif"
-testFile = "Unconnectedcurve/test2.tif"
+testFile = "testfolder/rotated_image.tif"
 #image = cv2.imread(testFile)
 #image = cv2.imread(testFile, cv2.IMREAD_GRAYSCALE)
 """ cv2.imwrite("testfolder/scantest.png", img) """
-image = cv2.imread(testFile, cv2.IMREAD_GRAYSCALE)
+#image = iio.imread(uri=folderpathhisto)[y:y+w, x:x+w-200,:]
+img = cv2.imread(testFile, cv2.IMREAD_GRAYSCALE)
+image = img[203:280,968:1012]#[180:325,3078:3125]
 h,w = image.shape
 #Choose the region of interest including excat boundries the graph
 rx, ry, rw, rh = 0,0, w, h
@@ -299,8 +297,8 @@ rx, ry, rw, rh = 0,0, w, h
 #tempgraph = process_chunks(image.copy())
 
 #Enter the min and max values from the source graph here
-y_min,y_max = 0.0, 1.0
-x_min,x_max = 0.0, 10.0    
+y_min,y_max = 0.0, 100.0 
+x_min,x_max = 10629.75, 10655.75
 
 #Extract the curve points on the image
 #image_path = "path_to_your_image.png"
@@ -310,50 +308,100 @@ curves = extractCurves(image)
 #Map curve (x,y) pixel points to actual data points from graph
 curve_normalized1 = [[np.float64((cx/rw)*(x_max-x_min)+x_min),np.float64((1-cy/rh)*(y_max-y_min)+y_min)] for cx,cy in curves[0]]
 curve_normalized1 = np.array(curve_normalized1)
-print(curve_normalized1)
 
-""" #Plot the simulatedcurve
+# Dictionary to store y-values for each x-value
+x_to_y_values = {}
+
+# Populate the dictionary with grouped values
+for cx, cy in curves[0]:
+    x_value = np.float64((cx/rw) * (x_max - x_min) + x_min)
+    y_value = np.float64((1 - cy/rh) * (y_max - y_min) + y_min)
+    
+    if x_value in x_to_y_values:
+        x_to_y_values[x_value].append(y_value)
+    else:
+        x_to_y_values[x_value] = [y_value]
+
+# Compute the average of y-values for each unique x-value
+curve_normalized1 = [
+    [x, np.mean(y_values)]
+    for x, y_values in x_to_y_values.items()
+]
+
+curve_normalized1 = np.array(curve_normalized1)
+
+print(curve_normalized1)
+#Lasiotester
+#Plot the simulatedcurve
 fig, ax = plt.subplots(figsize=(10,5))
-ax.set_xlim(0.0, 10.0)
-ax.set_ylim(0.0, 1.0)
+ax.set_xlim(10629.75, 10655.75)
+ax.set_ylim(0.0, 100.0)
 ax.plot(curve_normalized1[:,0],curve_normalized1[:,1],'o-',linewidth=3)
 ax.grid(True)
 plt.show()
-# Define the function
-def curve_function1(x):
-    return -0.001*x**3 + 0.0042*x**2 + 0.11*x
 
-def curve_function2(x):
-    return 0.001*x**3 - 0.0042*x**2 - 0.11*x + 1
 
-# Generate 500 points for x between 0 and 10
-x_values1 = np.linspace(0, 10, 500)
-y_values1 = curve_function1(x_values1)
 
-x_values2 = np.linspace(0, 10, 500)
-y_values2 = curve_function2(x_values2)
+#lasfn = "../T14502Las/T14502_02-Feb-07_JewelryLog.las"
+lasfn = "T14502Las/T14502_02-Feb-07_JewelryLog.las"
+import lasio
+las = lasio.read(str(lasfn),ignore_header_errors=True)
+#las = lasio.read(str(lasfn),encoding="cp866")
+#las = lasio.read(str(lasfn),encoding="windows-1251")
 
-#Same format for print
-temparraycurve1 = np.zeros((len(x_values1),2))
-for i in range(len(x_values1)):
-    temparraycurve1[i] = (x_values1[i], y_values1[i])
+headers=las.keys()
+units = {}
+for j in range(0, len(headers)):
+     uval = las.curves[j].unit
+     units[headers[j]] = uval
+
+dataarr = las.data
+metaheaders=las.well.keys()
+metadata=[]
+metadata.append({})
+metadata.append({})
+metadata.append({})
+
+
+for j in range(0, len(metaheaders)):
+     uval = las.well[j].unit
+     metadata[0][metaheaders[j]] = uval
+
+     tval = las.well[j].value
+     metadata[1][metaheaders[j]] = str(tval)
+
+     dval = las.well[j].descr
+     metadata[2][metaheaders[j]] = str(dval)
+
+print(metadata)
+print(units)
+depth = las['DEPT']
+#y = np.flip(depth,0)
+tempGAMM = las['GAMM']
+x = 0
+x = np.array(depth[100:350])
+y = np.array(tempGAMM[100:350]) 
+
+for i in range(len(y)):
+     if y[i] > 100:
+          y[i] -= 100
+
+interpolating = 50
+y2 = y[:105]
+x2 = x[:105]
+
+
+temparraycurve1 = np.zeros((len(x2),2))
+for i in range(len(x2)):
+    temparraycurve1[i] = (x2[i], y2[i])
 
 testdatacurve1 = np.array(temparraycurve1)
-#print(testdatacurve1)
-
-#Same format for print
-temparraycurve2 = np.zeros((len(x_values2),2))
-for i in range(len(x_values2)):
-    temparraycurve2[i] = (x_values2[i], y_values2[i])
-
-testdatacurve2 = np.array(temparraycurve2)
-print(testdatacurve2)
 
 from scipy.interpolate import interp1d
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 #Filter for NAN
-testfiltered = testdatacurve2[~np.isnan(testdatacurve2).any(axis=1)]
+testfiltered = testdatacurve1[~np.isnan(testdatacurve1).any(axis=1)]
 # Extract x and y from test and real
 x_sim, y_sim = curve_normalized1[:, 0], curve_normalized1[:, 1]
 x_real, y_real = testfiltered[:, 0], testfiltered[:, 1]
@@ -367,5 +415,15 @@ y_real_interp = interpolator(x_sim)
 mse = mean_squared_error(y_sim, y_real_interp)
 mae = mean_absolute_error(y_sim, y_real_interp)
 
-print(mse)
-print(mae) """
+print("mean squared error:", mse)
+print("Mean absolute error:", mae)
+
+#circularx = x % threshold
+""" print(xreverse[0])
+print(xreverse[:-1]) """
+""" fig, ax = plt.subplots(figsize=(5,3))
+#ax.plot(xreverse, yreverse, color='red', linewidth=1)
+ax.set_xlim(10629.75, 10655.75)
+ax.set_ylim(0, 100)
+ax.plot(x1,y1,color='blue', linewidth=1)
+ """

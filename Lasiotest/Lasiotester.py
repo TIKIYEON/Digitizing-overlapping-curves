@@ -1,7 +1,7 @@
 #Lasiotester
 import matplotlib.pyplot as plt
 import numpy as np
-lasfn = "../T14502Las/T14502_02-Feb-07_JewelryLog.las"
+lasfn = "T14502Las/T14502_02-Feb-07_JewelryLog.las"
 import lasio
 las = lasio.read(str(lasfn),ignore_header_errors=True)
 #las = lasio.read(str(lasfn),encoding="cp866")

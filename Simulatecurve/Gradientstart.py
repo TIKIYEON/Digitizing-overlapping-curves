@@ -1,6 +1,6 @@
 ## Libraries
+from doctest import testfile
 import math
-from os import error
 from pathlib import Path
 import imageio.v3 as iio
 import cv2
@@ -41,6 +41,7 @@ def extractCurves(ima):
     
     def is_endpoint(skeleton, x, y):
         # Count the number of neighbors (8-connectivity)
+        
         neighbors = np.sum(skeleton[y-1:y+2, x-1:x+2] == 255) - 1 # Subtract 1 to exclude the pixel itself
         return neighbors == 1  # Exactly 1 neighbor indicates an endpoint
     # Step 4: Identify intersection points
@@ -49,34 +50,41 @@ def extractCurves(ima):
         return neighbors > 2  # More than 2 neighbors means it's an intersection
 
     height, width = skeleton.shape
-    print(height)
-    print(width)
-    endtemp = []
+    startpoints = []
+    endpoints = []
     intersection_points = []   
     for y in range(0, height):
         for x in range(0, width):
             if skeleton[y,x] == 255 and is_endpoint(skeleton, x, y):
-                endtemp.append((x,y))
+                endpoints.append((x,y))
             if skeleton[y, x] == 255 and is_intersection(skeleton, x, y):
                 intersection_points.append((x, y))
 
-    endpoints = sorted(endtemp, key=lambda point: point[0])
-    #endpoints = sorted_points
+    sorted_points = sorted(endpoints, key=lambda point: point[0])
+
     #Split the sorted array into two arrays
-    #mid_index = len(sorted_points) // 2
-    #startpoints = sorted_points[:mid_index]  # First half
+    mid_index = len(sorted_points) // 2
+    startpoints = sorted_points[:mid_index]  # First half
     #endpoints = sorted_points[mid_index:]  # Second half   
     print(intersection_points)
-    #print(startpoints)
+    print(startpoints)
     print(endpoints)
-    #print(sorted_points)
-    
     if len(intersection_points) > 0:
+        skeleton_color = cv2.cvtColor(skeleton, cv2.COLOR_GRAY2BGR)
+        for (x, y) in intersection_points:
+            cv2.circle(skeleton_color, (x, y), 3, (0, 0, 255), -1)  # Mark intersections in red
+
+        plt.figure(figsize=(10,6))
+        plt.imshow(skeleton_color)
+        plt.show()
         min_x = (min(point[0] for point in intersection_points) - 1)
         max_x = (max(point[0] for point in intersection_points) + 1)
     else:
         min_x = 0
         max_x = 0
+    """ min_x = (min(point[0] for point in intersection_points) - 1)
+    max_x = (max(point[0] for point in intersection_points) + 1)
+    """
     # Iterate over the selected x-coordinates
     def profileline(x):
         
@@ -145,48 +153,7 @@ def extractCurves(ima):
                         
             
             if not neighbors:
-                if len(endpoints) == 1 or len(endpoints) == 0:
-                    endpoints.pop()
-                    break
-                
-                tempsave = 0
-                temppoint = (current_x, current_y)
-                for i in range(len(endpoints)):
-                    if temppoint == endpoints[i]:
-                        tempsave = i
-
-                for j in range(tempsave,len(endpoints)):
-                    tempendpoint = endpoints[j]
-                    
-                    if tempendpoint[0] > current_x:
-                        numofpoints = tempendpoint[0] - current_x
-                        for i in range(1,numofpoints):
-                            tempx = current_x+i
-                            ytemp = col_round(interpolate(tempx, temppoint, tempendpoint))
-                            for ny in range(max(0, ytemp-1), min(skeleton.shape[0], ytemp + 2)):
-                                for nx in range(max(0, tempx), min(skeleton.shape[1], tempx + 2)):
-                                    
-                                    if (nx, ny) != (current_x, current_y) and skeleton[ny, nx] == 255 and (nx, ny) not in visited:
-                                        visited.add((nx, ny))
-                            visited.add((tempx, ytemp))
-                            curve.append((tempx, ytemp))   
-                        current_x = tempendpoint[0]
-                        current_y = tempendpoint[1]
-                        endpoints.remove(endpoints[j])  
-                        break
-                endpoints.remove(endpoints[tempsave])
-                for ny in range(max(0, current_y-1), min(skeleton.shape[0], current_y + 2)):
-                    for nx in range(max(0, current_x), min(skeleton.shape[1], current_x + 2)):
-                        
-                        if (nx, ny) != (current_x, current_y) and skeleton[ny, nx] == 255 and (nx, ny) not in visited:
-                            neighbors.append((nx, ny))
-                if len(neighbors) == 0:
-                    break
-                """     endpoints.pop(point)
-                else:
-                    print("error, exit")
-                    break """
-
+                break  # No unvisited neighbors, curve ends
             counter = counter + 1
             tempslope = checkslope((current_x,current_y), neighbors[0])
             if (tempslope != 0.0):
@@ -207,8 +174,8 @@ def extractCurves(ima):
                     counter = 0
                     print(localmaximaormin)
             
-            current_x, current_y = neighbors[0]  
-
+            current_x, current_y = neighbors[0]
+            
             if (current_x,current_y) in intersection_start:
                 visited.add((current_x, current_y))
                 curve.append((current_x, current_y))
@@ -253,7 +220,7 @@ def extractCurves(ima):
 
     curves = []
 
-    for x, y in endpoints: #+ intersection_points:
+    for x, y in startpoints: #+ intersection_points:
         curve = trace_curve_with_gradients(skeleton, x, y, intersectstart, intersectend)
         curves.append(curve)
 
@@ -281,10 +248,9 @@ ytemp = 12000
 wtemp = 1250
 
 #testFile = "Profilelinetes/overlaytest0.tif"
-#testFile = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/Profilelinetest/Simcurve8.tif"
+testFile = "Singleintersection/Simcurve8.tif"
 #testFile = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/Profilelinetest/muVNT2.tif"
 #testFile = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/testfolder/fulltext.tif"
-testFile = "Unconnectedcurve/test2.tif"
 #image = cv2.imread(testFile)
 #image = cv2.imread(testFile, cv2.IMREAD_GRAYSCALE)
 """ cv2.imwrite("testfolder/scantest.png", img) """
@@ -308,11 +274,30 @@ curves = extractCurves(image)
 
 #iio.imwrite("Testresults/plot.tif",curvenum)
 #Map curve (x,y) pixel points to actual data points from graph
-curve_normalized1 = [[np.float64((cx/rw)*(x_max-x_min)+x_min),np.float64((1-cy/rh)*(y_max-y_min)+y_min)] for cx,cy in curves[0]]
+""" curve_normalized1 = [[np.float64((cx/rw)*(x_max-x_min)+x_min),np.float64((1-cy/rh)*(y_max-y_min)+y_min)] for cx,cy in curves[1]]
 curve_normalized1 = np.array(curve_normalized1)
-print(curve_normalized1)
+print(curve_normalized1) """
+x_to_y_values = {}
 
-""" #Plot the simulatedcurve
+# Populate the dictionary with grouped values
+for cx, cy in curves[0]:
+    x_value = np.float64((cx/rw) * (x_max - x_min) + x_min)
+    y_value = np.float64((1 - cy/rh) * (y_max - y_min) + y_min)
+    
+    if x_value in x_to_y_values:
+        x_to_y_values[x_value].append(y_value)
+    else:
+        x_to_y_values[x_value] = [y_value]
+
+# Compute the average of y-values for each unique x-value
+curve_normalized1 = [
+    [x, np.mean(y_values)]
+    for x, y_values in x_to_y_values.items()
+]
+
+curve_normalized1 = np.array(curve_normalized1)
+
+#Plot the simulatedcurve
 fig, ax = plt.subplots(figsize=(10,5))
 ax.set_xlim(0.0, 10.0)
 ax.set_ylim(0.0, 1.0)
@@ -367,5 +352,5 @@ y_real_interp = interpolator(x_sim)
 mse = mean_squared_error(y_sim, y_real_interp)
 mae = mean_absolute_error(y_sim, y_real_interp)
 
-print(mse)
-print(mae) """
+print("mean squared error:", mse)
+print("mean absolute error:", mae)

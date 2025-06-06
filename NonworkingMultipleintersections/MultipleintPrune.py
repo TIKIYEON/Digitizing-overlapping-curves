@@ -11,9 +11,21 @@ from skimage import morphology
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import ndimage
-from skimage.morphology import disk, opening, skeletonize
+from scipy.ndimage import gaussian_filter1d
+from skimage import color, img_as_float
+from skimage.morphology import disk, opening, skeletonize, remove_small_objects
 from skimage.transform import probabilistic_hough_line
+from skimage.measure import label, regionprops
+from skimage.filters import gaussian, frangi, hessian, meijering
+from skimage.segmentation import active_contour
+from scipy.interpolate import interp1d
 
+#from skimage.features import hessian_matrix, hessian_matrix_eigvals
+
+""" def detect_ridges(gray, sigma=3.0):
+    hxx, hyy, hxy = hessian_matrix(gray, sigma)
+    i1, i2 = hessian_matrix_eigvals(hxx, hxy, hyy)
+    return i1, i2 """
 
 def extractCurves(ima):
     #Read the image
@@ -21,64 +33,269 @@ def extractCurves(ima):
     #image = ndimage.gaussian_filter(img, sigma=1.0)
     
     plt.figure(figsize=(10,6))
+    plt.title("original image")
     plt.imshow(ima, cmap='gray')
     plt.show()
-    image = ndimage.gaussian_filter(ima, sigma=1)
-    #Threshold the image
-    _, binary = cv2.threshold(image, 127, 255, cv2.THRESH_BINARY_INV)  # Make curves white
+    img_float = img_as_float(ima) 
+    img_invert = 255 - ima
     plt.figure(figsize=(10,6))
-    plt.imshow(binary, cmap='gray')
+    plt.title("original image")
+    plt.imshow(img_invert, cmap='gray')
     plt.show()
-    # Step 3: Skeletonize the binary image
-    dilated = cv2.dilate(binary, kernel=np.ones((3,3), np.uint8), iterations=1)
-    #skeleton = morphology.skeletonize(dilated // 255, method= 'lee')  # Normalize binary to 0 and 1
-    skeleton = morphology.thin(dilated)
-    skeleton = (skeleton * 255).astype("uint8")  # Convert back to 8-bit for OpenCV
+    ridgeimg = hessian(img_invert)
+    plt.figure(figsize=(10,6))
+    plt.title("ridge image")
+    plt.imshow(ridgeimg, cmap='gray')
+    plt.show()
+    """ image = ndimage.gaussian_filter(ima, sigma=1.0)
+    plt.figure(figsize=(10,6))
+    plt.title("Gausian Blur image")
+    plt.imshow(image, cmap='gray')
+    plt.show() """
+    #Threshold the image
+    #binimage = np.where(125,255,0).astype(np.uint8)
+    # Convert the image to a [0, 1] floating-point representation.
+    # Convert image to float in [0, 1]
+    # For active contours, we convert to float in [0, 1].
+    # Convert to float in [0, 1] for the snake processing.
+    
+    img_inverted = ima
+    # Invert the image for findContours (white objects on black background)
+    
 
+    # Apply Otsu's thresholding to separate the waveform from the background.
+    _, thresh = cv2.threshold(img_inverted, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    # --- Step 2: Find All External Contours ---
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Option: Filter out contours that are too small (by area)
+    min_area = 300  # Adjust based on your image scale
+    filtered_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_area]
+
+    # --- Step 3: For Each Contour, Re-sample and Prepare an Initial Snake ---
+    init_contours = []  # To store re-sampled initial contours for each snake.
+    snakes = []         # To store active contour results.
+
+    # Define the number of points you want to use in each snake.
+    num_points = 500
+
+    for cnt in filtered_contours:
+        # Remove extra dimensions: shape (N,1,2) -> (N,2)
+        cnt = cnt.squeeze().astype(np.float32)
+        if cnt.ndim != 2 or cnt.shape[1] != 2:
+            continue
+
+        # Compute cumulative arc length (distance along the contour)
+        diff = np.diff(cnt, axis=0)
+        dists = np.sqrt((diff**2).sum(axis=1))
+        cum_dists = np.concatenate(([0], np.cumsum(dists)))
+        total_length = cum_dists[-1]
+
+        # Create a uniform set of points along the cumulative distance.
+        uniform_dists = np.linspace(0, total_length, num_points)
+
+        # Interpolate x and y coordinates separately.
+        fx = interp1d(cum_dists, cnt[:, 0], kind='linear', fill_value="extrapolate")
+        fy = interp1d(cum_dists, cnt[:, 1], kind='linear', fill_value="extrapolate")
+        cnt_uniform = np.vstack((fx(uniform_dists), fy(uniform_dists))).T
+
+        init_contours.append(cnt_uniform)
+        try:
+            # Run the active contour on the inverted float image.
+            snake = active_contour(
+                1 - img_float,   # Invert the float image so that the object appears as a valley.
+                cnt_uniform,     # The uniformly re-sampled initial contour.
+                alpha=0.01,      # Elasticity (lower for more flexibility)
+                beta=2,          # Rigidity (controls smoothness)
+                gamma=0.1        # Step size
+            )
+            snakes.append(snake)   
+        except Exception as e:
+            print("Error processing contour:", e)
+
+    # --- Step 4: Visualize the Initial Contours and Their Corresponding Snakes ---
+    plt.figure(figsize=(10, 10))
+    plt.imshow(1 - img_float, cmap='gray')
+    colors = ['r', 'g', 'b', 'c', 'm', 'y']  # Color cycle for different snakes
+
+    for i, init_cnt in enumerate(init_contours):
+        plt.plot(init_cnt[:, 0], init_cnt[:, 1], '--', lw=2,
+                color=colors[i % len(colors)], label=f"Initial Contour {i}")
+
+    for i, snake in enumerate(snakes):
+        plt.plot(snake[:, 0], snake[:, 1], '-', lw=2,
+                color=colors[i % len(colors)], label=f"Snake {i}")
+
+    plt.title("Active Contours for All Detected Contours")
+    plt.legend()
+    plt.show()
+    skeleton = morphology.skeletonize(img_float)  # Normalize binary to 0 and 1
+    skeleton = (skeleton * 255).astype("uint8")  # Convert back to 8-bit for OpenCV
+    #skeleton = morphology.thin(binary)
+
+    # Pruning the skeleton by removing endpoints iteratively
+
+    #skeleton = morphology.thin(binary)
+    
+    
     #skeleton = ndimage.gaussian_filter(skeleto, sigma=1.0)
     plt.figure(figsize=(10,6))
+    plt.title("Skeleton image")
     plt.imshow(skeleton, cmap='gray')
     plt.show()
     
+    #Helper functions, finds all points with only 1 neighbour in 8 connectivity
     def is_endpoint(skeleton, x, y):
         # Count the number of neighbors (8-connectivity)
         neighbors = np.sum(skeleton[y-1:y+2, x-1:x+2] == 255) - 1 # Subtract 1 to exclude the pixel itself
         return neighbors == 1  # Exactly 1 neighbor indicates an endpoint
-    # Step 4: Identify intersection points
+    #Helper functions, finds all points with more than 2 neighbours in 8 connectivity
     def is_intersection(skeleton, x, y):
         neighbors = np.sum(skeleton[y-1:y+2, x-1:x+2] == 255)-1
         return neighbors > 2  # More than 2 neighbors means it's an intersection
 
+    #Finds all the endpoints and intersection points in skeletonized picture
     height, width = skeleton.shape
     print(height)
     print(width)
-    endtemp = []
-    intersection_points = []   
-    for y in range(0, height):
-        for x in range(0, width):
-            if skeleton[y,x] == 255 and is_endpoint(skeleton, x, y):
-                endtemp.append((x,y))
-            if skeleton[y, x] == 255 and is_intersection(skeleton, x, y):
-                intersection_points.append((x, y))
+    
+    intersection_points = []  
+    iterations = 15
+    original = skeleton.copy()
+    for i in range(iterations):
+        # Thinning step:
+        thinned = morphology.thin(skeleton > 0) 
+        thinned = (thinned.astype(np.uint8)) * 255
 
-    endpoints = sorted(endtemp, key=lambda point: point[0])
+        # Endpoint detection on the thinned skeleton:
+        endpoint_coords = []
+        intersection_coords = []
+
+        # Extract only foreground pixels for faster iteration
+        foreground_pixels = np.argwhere(thinned == 255)  # Returns (y, x) pairs
+
+        #check for endpoints and intersections
+        for y, x in foreground_pixels:
+            if 1 <= y < height - 1 and 1 <= x < width - 1:  # Ensure we stay within bounds
+                if is_endpoint(thinned, x, y):
+                    endpoint_coords.append((x, y))
+                elif is_intersection(thinned, x, y):
+                    intersection_coords.append((x, y))
+
+
+
+        # Create a mask for endpoints and dilate if needed:
+        endpoint_mask = np.zeros_like(thinned, dtype=np.uint8)
+        for (x, y) in endpoint_coords:
+            endpoint_mask[y, x] = 255
+
+        #intersections aren't remoed:
+        for (x, y) in intersection_coords:
+            endpoint_mask[y, x] = 0  
+
+       
+        # Remove endpoints using a dilated mask (if desired):
+        kernel = np.ones((3, 3), np.uint8)
+        dilated_mask = cv2.bitwise_and(cv2.dilate(endpoint_mask, kernel, iterations=1), original)
+        thinned = cv2.subtract(thinned, dilated_mask)
+        #cv2.bitwise_not(
+        # Update skeleton for the next iteration:
+        skeleton = thinned.copy()
+        
+        # Debug :
+        """ plt.figure(figsize=(6, 4))
+        plt.title(f"Iteration {i+1}")
+        plt.imshow(skeleton, cmap='gray')
+        plt.show() """
+    """ for i in range(iterations): 
+        original = skeleton.copy()
+        x1 = morphology.skeletonize(original)
+        plt.figure(figsize=(10,6))
+        plt.title("x1")
+        plt.imshow(x1, cmap='gray')
+        plt.show()
+        x1 = (x1 * 255).astype("uint8")
+        x2 = []e
+        for y in range(0, height):
+            for x in range(0, width):
+                if x1[y, x] == 255 and is_endpoint(x1, x, y):
+                    x2.append((x, y))
+        
+        #for i in range(len(endtemp)):
+        #tempp = endtemp[i]
+        mask = np.zeros_like(original, dtype=np.uint8)
+        kernel1 = np.ones((3,3), np.uint8)
+        for (x,y) in x2:
+            mask[y,x] = 255
+        
+        temp_dilation = cv2.dilate(mask, kernel1,iterations=1)  # Apply dilation only on endpoints
+        plt.figure(figsize=(10,6))
+        plt.title("tempdialation")
+        plt.imshow(temp_dilation, cmap='gray')
+        plt.show()
+        x3 = np.where(temp_dilation == 255, 255, original)
+        plt.figure(figsize=(10,6))
+        plt.title("x3")
+        plt.imshow(x3, cmap='gray')
+        plt.show()
+        #dilated = cv2.dilate(skeleton, kernel= kernel1, iterations=1)
+        
+        x4 = np.logical_or(x1, x3)
+        skeleton = (x4 * 255).astype("uint8")
+        #skeleton = (skeleton * 255).astype("uint8")
+        plt.figure(figsize=(10,6))
+        plt.title("x4/skeleton")
+        plt.imshow(skeleton, cmap='gray')
+        plt.show() """
+    """ kernel = np.ones((3, 3), np.uint8)
+    dilated = cv2.dilate(endtemp, kernel) """
+    """ skeleton = np.where(original == 1, x3, original)
+    plt.figure(figsize=(10,6))
+    plt.imshow(skeleton, cmap='gray')
+    plt.show() """  
+    endpointstemp = []
+
+    for y in range(0, height):
+            for x in range(0, width):
+                if skeleton[y,x] == 255 and is_endpoint(skeleton, x, y):
+                    endpointstemp.append((x,y))
+                if skeleton[y, x] == 255 and is_intersection(skeleton, x, y):
+                    intersection_points.append((x, y))
+    endpoints = sorted(endpointstemp, key=lambda point: point[0])
+
+    plt.figure(figsize=(10,6))
+    plt.title("Pruned image")
+    plt.imshow(skeleton, cmap='gray')
+    plt.show()
+    
     #endpoints = sorted_points
     #Split the sorted array into two arrays
     #mid_index = len(sorted_points) // 2
     #startpoints = sorted_points[:mid_index]  # First half
     #endpoints = sorted_points[mid_index:]  # Second half   
     print(intersection_points)
+    
+    
     #print(startpoints)
     print(endpoints)
     #print(sorted_points)
     
+    #If there´s intersections points, can only handle 1 right now
     if len(intersection_points) > 0:
+        skeleton_color = cv2.cvtColor(skeleton, cv2.COLOR_GRAY2BGR)
+        for (x, y) in intersection_points:
+            cv2.circle(skeleton_color, (x, y), 3, (0, 0, 255), -1)  # Mark intersections in red
+
+        plt.figure(figsize=(10,6))
+        plt.imshow(skeleton_color)
+        plt.show()
         min_x = (min(point[0] for point in intersection_points) - 1)
         max_x = (max(point[0] for point in intersection_points) + 1)
     else:
         min_x = 0
         max_x = 0
-    # Iterate over the selected x-coordinates
+    # Iterate and find all curve elements with specific x value
     def profileline(x):
         
         binary_points = []
@@ -91,6 +308,7 @@ def extractCurves(ima):
                     binary_points.append((x, y))  # Append the (x, y) position
        
         result = []
+        # Handles if there´s 2 or more neighboring pixels on the profile line, it picks the one with the highest y value
         for i in range(len(binary_points)):
             # Checks if there's a previous point with same x value, and if it is +1
             if i > 0 and binary_points[i][1] == binary_points[i - 1][1] + 1:
@@ -104,12 +322,14 @@ def extractCurves(ima):
     intersectstart = profileline(min_x)
     intersectend = profileline(max_x)
 
+    #Helper function that calculates a slope
     def checkslope(point1, point2):
         x = point2[0]-point1[0]
         if x == 0:
             return 0.0
         return (point2[1]-point1[1])/x
     
+    #Helper function that interpolates the x value in between 2 points
     def interpolate(x, point1, point2):
         x1 = point1[0]
         y1 = point1[1]
@@ -120,23 +340,30 @@ def extractCurves(ima):
             raise ValueError("x is out of bounds!")
         # Calculate the interpolated y-value
         return y1 + (y2 - y1) * (x - x1) / (x2 - x1)
-
+    
+    #Helper functions that rounds .5 and above to 1, and below to 0, to choose the closest matching pixel
     def col_round(x):
         frac = x - math.floor(x)
         if frac < 0.5: return math.floor(x)
         return math.ceil(x)
     # Refined trace function to handle intersections
     def trace_curve_with_gradients(skeleton, start_x, start_y, intersection_start, intesection_end):
+        #sets up needed variables
         curve = [(start_x, start_y)]
         visited = set(curve)
         current_x, current_y = start_x, start_y
         localmaximaormin = (start_x,start_y)
         currenttempslope = 999
         counter = 0
+        h, w = skeleton.shape
+        #Threhsolds used for when wrapping, so it doesn´t interpolate if x is more than 1 pixel away
+        height95thresh = (h/100.0)*95.0
+        height5thresh = (h/100)*5
         while True:
             neighbors = []
             counter = counter+1
             #(10,10) range(9, 12) (9,9) (9,10) (9,11)
+            #Finds all neighbors, except those with -1 x pixel values
             for ny in range(max(0, current_y-1), min(skeleton.shape[0], current_y + 2)):
                 for nx in range(max(0, current_x), min(skeleton.shape[1], current_x + 2)):
                     
@@ -144,46 +371,63 @@ def extractCurves(ima):
                         neighbors.append((nx, ny))
                 #grad = (ny - current_y) / (nx - current_x + 1e-6)
                         
-            
+            #Termination needs to be here, but expanded to handle wrapping and non connected curves
             if not neighbors:
+                #Termination of while true loop, if last endpoint has no neighbors, or no endpoints is left
                 if len(endpoints) == 1 or len(endpoints) == 0:
                     endpoints.pop()
                     break
                 
+                #Get index number if found endpoint
                 tempsave = 0
                 temppoint = (current_x, current_y)
                 for i in range(len(endpoints)):
                     if temppoint == endpoints[i]:
                         tempsave = i
-
+                #Endpoints are sorted by x, so check all the endspoints with higher x value
                 for j in range(tempsave,len(endpoints)):
+
                     tempendpoint = endpoints[j]
-                    
+                    #If higher x value
                     if tempendpoint[0] > current_x:
-                        numofpoints = tempendpoint[0] - current_x
-                        for i in range(1,numofpoints):
-                            tempx = current_x+i
-                            ytemp = col_round(interpolate(tempx, temppoint, tempendpoint))
-                            for ny in range(max(0, ytemp-1), min(skeleton.shape[0], ytemp + 2)):
-                                for nx in range(max(0, tempx), min(skeleton.shape[1], tempx + 2)):
-                                    if (nx, ny) != (current_x, current_y) and skeleton[ny, nx] == 255 and (nx, ny) not in visited:
-                                        visited.add((nx, ny))
-                            visited.add((tempx, ytemp))
-                            curve.append((tempx, ytemp))   
+                        #If no wrapping 
+                        if not (current_y > height95thresh) and not (tempendpoint[1] < height5thresh):
+                            if not (temppoint[1] > height95thresh) and not (current_y < height5thresh):  
+                                #Linearly interpolate the space between the 2 found endpoints
+                                numofpoints = tempendpoint[0] - current_x
+                                for i in range(1,numofpoints):
+                                    tempx = current_x+i
+                                    ytemp = col_round(interpolate(tempx, temppoint, tempendpoint))
+                                    #Avoid ending curve prematurely, by making sure original pixels non interpolated
+                                    #Is added to visited
+                                    for ny in range(max(0, ytemp-1), min(skeleton.shape[0], ytemp + 2)):
+                                        for nx in range(max(0, tempx), min(skeleton.shape[1], tempx + 2)):
+                                            if (nx, ny) != (current_x, current_y) and skeleton[ny, nx] == 255 and (nx, ny) not in visited:
+                                                visited.add((nx, ny))
+                                    visited.add((tempx, ytemp))
+                                    curve.append((tempx, ytemp))   
+                        #Set current x and y to new endpoint
                         current_x = tempendpoint[0]
                         current_y = tempendpoint[1]
+                        #Remove the new endpoint from endpoints list 
                         endpoints.remove(endpoints[j])  
+                        #break 
                         break
+                #Remove the original endpoint from the endpoint list
                 endpoints.remove(endpoints[tempsave])
+                #Check for neighbors
                 for ny in range(max(0, current_y-1), min(skeleton.shape[0], current_y + 2)):
                     for nx in range(max(0, current_x), min(skeleton.shape[1], current_x + 2)):
                         
                         if (nx, ny) != (current_x, current_y) and skeleton[ny, nx] == 255 and (nx, ny) not in visited:
                             neighbors.append((nx, ny))
+                #If no neighbors, terminate
                 if len(neighbors) == 0:
                     break
-
+            #Counter used to make sure slope is updated enough
             counter = counter + 1
+            #Checks if slope goes from positive to negative or reverse
+            #If does, update the new localmaxormin, and reset the counter
             tempslope = checkslope((current_x,current_y), neighbors[0])
             if (tempslope != 0.0):
                 if currenttempslope == 999:
@@ -203,8 +447,9 @@ def extractCurves(ima):
                     counter = 0
                     print(localmaximaormin)
             
+            #Go to next neibor
             current_x, current_y = neighbors[0]  
-
+            #If the next neighbor is in intersection
             if (current_x,current_y) in intersection_start:
                 visited.add((current_x, current_y))
                 curve.append((current_x, current_y))
@@ -248,7 +493,7 @@ def extractCurves(ima):
         return curve
 
     curves = []
-
+    #Start on first endpoint, and iterate through endpoints
     for x, y in endpoints: #+ intersection_points:
         curve = trace_curve_with_gradients(skeleton, x, y, intersectstart, intersectend)
         curves.append(curve)
@@ -268,7 +513,7 @@ def extractCurves(ima):
         plt.show()
     for i, curve in enumerate(curves):
         plot_curve(curve, f"Curve {i + 1}")
-        print(curve)
+        #print(curve)
     return curves
     
 
@@ -281,11 +526,14 @@ wtemp = 1250
 #testFile = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/Profilelinetest/Simcurve8.tif"
 #testFile = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/Profilelinetest/muVNT2.tif"
 #testFile = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/testfolder/fulltext.tif"
-testFile = "wrapping/onewrap.tif"
+#testFile = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/wrapping/twowrap2.tif"
+#testFile = "C:/Users/willi/OneDrive/Skrivebord/Bachelor/Github/Digitizing-overlapping-curves/Multipleintersections/T00105.las-1v0.tif"
+testFile = "NonworkingMultipleintersections/rotated_image.tif"
 #image = cv2.imread(testFile)
 #image = cv2.imread(testFile, cv2.IMREAD_GRAYSCALE)
 """ cv2.imwrite("testfolder/scantest.png", img) """
-image = cv2.imread(testFile, cv2.IMREAD_GRAYSCALE)
+img = cv2.imread(testFile, cv2.IMREAD_GRAYSCALE)
+image = img[:,2000:3500]
 h,w = image.shape
 #Choose the region of interest including excat boundries the graph
 rx, ry, rw, rh = 0,0, w, h
@@ -333,7 +581,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 #lasfn = "../T14502Las/T14502_02-Feb-07_JewelryLog.las"
-lasfn = "T14502Las/T14502_02-Feb-07_JewelryLog.las"
+lasfn = "/T14502Las/T14502_02-Feb-07_JewelryLog.las"
 import lasio
 las = lasio.read(str(lasfn),ignore_header_errors=True)
 #las = lasio.read(str(lasfn),encoding="cp866")
@@ -380,16 +628,18 @@ x = 0
 
 
 
-x = np.array(depth[:112])
-y = np.array(tempGAMM[:112]) 
+x = np.array(depth[100:216])
+y = np.array(tempGAMM[100:216]) 
 wrapcounter = 0
 #Enter the min and max values from the source graph here
-y_min,y_max = 0.0, 100.0
-x_min,x_max = x[0], x[-1]   
+y_min,y_max = 0.0, 1.0
+x_min,x_max = 0.0, 10.0 
 
+#Normalizes the data to chosen x and y bounds
 curve_normalized1 = [[np.float64((cx/rw)*(x_max-x_min)+x_min),np.float64((1-cy/rh)*(y_max-y_min)+y_min)] for cx,cy in curves[0]]
 curve_normalized1 = np.array(curve_normalized1)
 
+#Handles wrapping
 ythreshmin = ((y_max - y_min)/100)*5
 ythreshmax = ((y_max - y_min)/100)*95
 maxy = 0
@@ -397,7 +647,7 @@ for i in range(len(curve_normalized1)-1):
     curpoint = curve_normalized1[i].copy()
     curpointoriginal = curpoint.copy()
     nextpoint = curve_normalized1[i+1].copy()
-    differencepre = abs(curpoint[1] - nextpoint[1])
+    
     if wrapcounter != 0:
         curpoint[1] = (wrapcounter * y_max) + curpoint[1]
         curve_normalized1[i] = curpoint
@@ -413,7 +663,8 @@ for i in range(len(curve_normalized1)-1):
     if (curpointoriginal[1] < ythreshmin ) and (nextpoint[1] > ythreshmax):
         wrapcounter -= 1
 
-temppoint = curve_normalized1[-1]
+
+temppoint = curve_normalized1[-1].copy()
 temppoint[1] = (wrapcounter * y_max) + temppoint[1]
 curve_normalized1[-1] = temppoint  
 """ if (curpoint[1] < ythreshmax) or (curpoint[1] > ythreshmin):
@@ -429,11 +680,11 @@ curve_normalized1[-1] = temppoint
 
 curve_normalized1 = np.array(curve_normalized1) """
 print(curve_normalized1)
-np.savetxt("wrapping/2darray.txt", curve_normalized1, fmt='%2f', delimiter=',')
+np.savetxt("Multipleintersections/2darray.txt", curve_normalized1, fmt='%2f', delimiter=',')
 
 #Plot the simulatedcurve
 fig, ax = plt.subplots(figsize=(10,5))
-ax.set_xlim(x[0], x[-1])
+ax.set_xlim(0, 10)
 ax.set_ylim(0.0, maxy+ythreshmin)
 ax.plot(curve_normalized1[:,0],curve_normalized1[:,1],'o-',linewidth=3)
 ax.grid(True)
@@ -445,12 +696,12 @@ plt.show()
 def curve_function2(x):
     return 0.001*x**3 - 0.0042*x**2 - 0.11*x + 1 """
 
-""" """ # Generate 500 points for x between 0 and 10
-x_values1 = x
-y_values1 = y
+""" # Generate 500 points for x between 0 and 10
+x_values1 = np.linspace(0, 10, 500)
+y_values1 = curve_function1(x_values1)
 
-x_values2 = x
-y_values2 = y
+x_values2 = np.linspace(0, 10, 500)
+y_values2 = curve_function2(x_values2)
 
 #Same format for print
 temparraycurve1 = np.zeros((len(x_values1),2))
@@ -484,6 +735,7 @@ y_real_interp = interpolator(x_sim)
 
 #Mean Square and mean absolute
 mse = mean_squared_error(y_sim, y_real_interp)
-mae = mean_absolute_error(y_sim, y_real_interp)
-print(mse)
-print(mae)
+mae = mean_absolute_error(y_sim, y_real_interp) """
+
+""" print(mse)
+print(mae) """
