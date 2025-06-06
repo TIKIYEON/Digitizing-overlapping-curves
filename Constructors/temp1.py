@@ -75,5 +75,5 @@ ax.spines['bottom'].set_visible(False)
 
 ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
 ax.grid(True)
-plt.savefig('NoscreenshotCurve2.tif', dpi=300, format='tiff', bbox_inches='tight', pad_inches=0)
+#plt.savefig('NoscreenshotCurve2.tif', dpi=300, format='tiff', bbox_inches='tight', pad_inches=0)
 plt.show()

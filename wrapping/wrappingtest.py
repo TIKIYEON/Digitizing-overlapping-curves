@@ -380,12 +380,12 @@ x = 0
 
 
 
-x = np.array(depth[100:216])
-y = np.array(tempGAMM[100:216]) 
+x = np.array(depth[:112])
+y = np.array(tempGAMM[:112]) 
 wrapcounter = 0
 #Enter the min and max values from the source graph here
 y_min,y_max = 0.0, 100.0
-x_min,x_max = 10629.75, 10657.5   
+x_min,x_max = x[0], x[-1]   
 
 curve_normalized1 = [[np.float64((cx/rw)*(x_max-x_min)+x_min),np.float64((1-cy/rh)*(y_max-y_min)+y_min)] for cx,cy in curves[0]]
 curve_normalized1 = np.array(curve_normalized1)
@@ -433,7 +433,7 @@ np.savetxt("wrapping/2darray.txt", curve_normalized1, fmt='%2f', delimiter=',')
 
 #Plot the simulatedcurve
 fig, ax = plt.subplots(figsize=(10,5))
-ax.set_xlim(10629.75, 10657.5)
+ax.set_xlim(x[0], x[-1])
 ax.set_ylim(0.0, maxy+ythreshmin)
 ax.plot(curve_normalized1[:,0],curve_normalized1[:,1],'o-',linewidth=3)
 ax.grid(True)
@@ -445,12 +445,12 @@ plt.show()
 def curve_function2(x):
     return 0.001*x**3 - 0.0042*x**2 - 0.11*x + 1 """
 
-""" # Generate 500 points for x between 0 and 10
-x_values1 = np.linspace(0, 10, 500)
-y_values1 = curve_function1(x_values1)
+""" """ # Generate 500 points for x between 0 and 10
+x_values1 = x
+y_values1 = y
 
-x_values2 = np.linspace(0, 10, 500)
-y_values2 = curve_function2(x_values2)
+x_values2 = x
+y_values2 = y
 
 #Same format for print
 temparraycurve1 = np.zeros((len(x_values1),2))
@@ -484,7 +484,6 @@ y_real_interp = interpolator(x_sim)
 
 #Mean Square and mean absolute
 mse = mean_squared_error(y_sim, y_real_interp)
-mae = mean_absolute_error(y_sim, y_real_interp) """
-
-""" print(mse)
-print(mae) """
+mae = mean_absolute_error(y_sim, y_real_interp)
+print(mse)
+print(mae)

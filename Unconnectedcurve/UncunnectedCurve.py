@@ -1,5 +1,4 @@
 ## Libraries
-from doctest import testfile
 import math
 from os import error
 from pathlib import Path
@@ -309,11 +308,11 @@ curves = extractCurves(image)
 
 #iio.imwrite("Testresults/plot.tif",curvenum)
 #Map curve (x,y) pixel points to actual data points from graph
-""" curve_normalized1 = [[np.float64((cx/rw)*(x_max-x_min)+x_min),np.float64((1-cy/rh)*(y_max-y_min)+y_min)] for cx,cy in curves[1]]
+curve_normalized1 = [[np.float64((cx/rw)*(x_max-x_min)+x_min),np.float64((1-cy/rh)*(y_max-y_min)+y_min)] for cx,cy in curves[0]]
 curve_normalized1 = np.array(curve_normalized1)
 print(curve_normalized1)
 
-#Plot the simulatedcurve
+""" #Plot the simulatedcurve
 fig, ax = plt.subplots(figsize=(10,5))
 ax.set_xlim(0.0, 10.0)
 ax.set_ylim(0.0, 1.0)
