@@ -1,0 +1,9 @@
+{
+    "dataset_dir": "datasets/betterTiff",
+    "seg_dir": "projects/betterTiff/segmentations",
+    "file_names": [
+        "1860310 Gamma Ray Log Scan_001.jpg"
+    ],
+    "message_dir": "projects/betterTiff/messages",
+    "model_dir": "projects/betterTiff/models"
+}

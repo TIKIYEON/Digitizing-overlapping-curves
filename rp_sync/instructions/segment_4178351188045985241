@@ -1,0 +1,9 @@
+{
+    "dataset_dir": "datasets/lascurves",
+    "seg_dir": "projects/lascurves/segmentations",
+    "file_names": [
+        "T08478.las-1_001.jpg"
+    ],
+    "message_dir": "projects/lascurves/messages",
+    "model_dir": "projects/lascurves/models"
+}

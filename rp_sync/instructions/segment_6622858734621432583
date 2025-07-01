@@ -1,0 +1,9 @@
+{
+    "dataset_dir": "datasets/betterTiff",
+    "seg_dir": "projects/betterTiff/segmentations",
+    "file_names": [
+        "2002170_PBU 02-03B_Gamma Ray Log Scan (TVD)_002.jpg"
+    ],
+    "message_dir": "projects/betterTiff/messages",
+    "model_dir": "projects/betterTiff/models"
+}

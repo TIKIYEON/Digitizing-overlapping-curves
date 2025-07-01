@@ -1,0 +1,9 @@
+{
+    "dataset_dir": "datasets/betterTiff",
+    "seg_dir": "projects/betterTiff/segmentations",
+    "file_names": [
+        "1780180 PRUDHOE BAY UNIT 04-12 TEMP LOG_001.jpg"
+    ],
+    "message_dir": "projects/betterTiff/messages",
+    "model_dir": "projects/betterTiff/models"
+}

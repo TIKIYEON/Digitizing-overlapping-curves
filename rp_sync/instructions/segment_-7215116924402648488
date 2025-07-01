@@ -1,0 +1,9 @@
+{
+    "dataset_dir": "datasets/betterTiff",
+    "seg_dir": "projects/betterTiff/segmentations",
+    "file_names": [
+        "T19982 Stage1Jewelry_16JUL10_000.jpg"
+    ],
+    "message_dir": "projects/betterTiff/messages",
+    "model_dir": "projects/betterTiff/models"
+}

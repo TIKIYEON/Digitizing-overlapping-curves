@@ -1,0 +1,9 @@
+{
+    "dataset_dir": "datasets/bigData",
+    "seg_dir": "projects/scannedAndDigital/segmentations",
+    "file_names": [
+        "KLU-A4 PB1 - Drilling Dynamics Log TVD_000.jpg"
+    ],
+    "message_dir": "projects/scannedAndDigital/messages",
+    "model_dir": "projects/scannedAndDigital/models"
+}

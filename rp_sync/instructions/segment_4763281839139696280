@@ -1,0 +1,9 @@
+{
+    "dataset_dir": "datasets/betterTiff",
+    "seg_dir": "projects/betterTiff/segmentations",
+    "file_names": [
+        "CD3-130 PB2  EcoScope 2TVD Recorded Mode Log_004.jpg"
+    ],
+    "message_dir": "projects/betterTiff/messages",
+    "model_dir": "projects/betterTiff/models"
+}

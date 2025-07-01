@@ -1,0 +1,13 @@
+2025-05-20 22:13:20.691866|sys_exception|Error. type: <class 'KeyboardInterrupt'>, value: , traceback:   File "/home/tikki/Documents/School/BachelorProject/root_painter-0/root_painter-0.2.27/painter/src/main/python/root_painter.py", line 818, in check
+    def check():
+
+2025-05-20 22:13:39.335948|sys_exception|Error. type: <class 'KeyboardInterrupt'>, value: , traceback:   File "/home/tikki/Documents/School/BachelorProject/root_painter-0/root_painter-0.2.27/painter/src/main/python/main.py", line 73, in <module>
+    init_root_painter()
+  File "/home/tikki/Documents/School/BachelorProject/root_painter-0/root_painter-0.2.27/painter/src/main/python/main.py", line 59, in init_root_painter
+    exit_code = app.exec_()
+
+2025-06-01 16:32:30.966859|sys_exception|Error. type: <class 'KeyboardInterrupt'>, value: , traceback:   File "/home/tikki/Documents/School/BachelorProject/root_painter-0/root_painter-0.2.27/painter/src/main/python/main.py", line 73, in <module>
+    init_root_painter()
+  File "/home/tikki/Documents/School/BachelorProject/root_painter-0/root_painter-0.2.27/painter/src/main/python/main.py", line 59, in init_root_painter
+    exit_code = app.exec_()
+
